@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged } from "firebase/auth";
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { connectFunctionsEmulator } from 'firebase/functions';

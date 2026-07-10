@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "../hooks/useAuth";
+import { saveWord } from "../services/vocabulary";
 import useDictionary from "../hooks/useDictionary";
 import useJisho from "../hooks/useJisho";
 
@@ -11,13 +13,34 @@ function highlightWord(sentence, word) {
     );
   }
 
-function VocabCard({word, sentence,onClose,}) {
+function VocabCard({word, sentence,onClose, articleUrl, articleTitle}) {
     const { data, loading, error } = useDictionary(word);
     const { data: japanese } = useJisho(word);
+    const { user } = useAuth();
+    const [saved, setSaved] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+
     const definition = data?.meanings?.[0]?.definitions?.[0]?.definition;
     const pronunciation = data?.phonetic || data?.phonetics?.[0]?.text;
     const partOfSpeech = data?.meanings?.[0]?.partOfSpeech;
     const example = data?.meanings?.[0]?.definitions?.[0]?.example;
+
+    async function handleSave() {
+      if(!user || saving) return;
+
+      setSaving(true);
+      await saveWord(user.uid, {
+        word,
+        definitionEn: definition || "",
+        definitionJa: japanese?.kanji || "",
+        exampleSentence: sentence || example || "",
+        sourceArticleUrl: articleUrl || null,
+        sourceArticleTitle: articleTitle || null,
+      })
+      setSaving(false);
+      setSaved(true);
+    }
 
   return (
     <div className="w-full max-w-md rounded-2xl bg-neutral-900 p-6 text-white shadow-xl">
@@ -104,9 +127,11 @@ function VocabCard({word, sentence,onClose,}) {
 
       <button
         type="button"
+        onClick={handleSave}
+        disabled={saved || saving}
         className="mt-6 w-full rounded-xl bg-emerald-800 py-3 text-sm font-medium text-white"
       >
-        ✓ Saved to vocabulary
+        {saved ? "✓ Saved to vocabulary" : saving ? "Saving..." : "Save to vocabulary"}
       </button>
     </div>
   );

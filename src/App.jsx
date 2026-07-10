@@ -8,14 +8,14 @@ import Home from './pages/Home'
 import Reader from './pages/Reader'
 import Vocabulary from './pages/Vocabulary'
 import Quiz from './pages/Quiz'
-import { auth } from './services/firebase'
-
-console.log('Firebase connected:', auth);
-
+import { useAuth } from './hooks/useAuth'
 
 function App() {
+  const { user, loading } = useAuth();
   const location = useLocation();
   const isReaderPage = location.pathname === '/reader';
+
+  if (loading) return <div>Loading...</div>;
 
   return <div>
     {!isReaderPage && <Navbar />}
