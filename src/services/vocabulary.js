@@ -21,5 +21,5 @@ export async function saveWord(uid, wordData) {
 export async function getAllWords(uid) {
   const vocabRef = collection(db, "users", uid, "vocabulary");
   const snapshot = await getDocs(vocabRef);
-  return snapshot.docs.map((doc) => doc.data());
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 }
