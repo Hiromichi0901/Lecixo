@@ -7,7 +7,7 @@ import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Reader from './pages/Reader'
 import Vocabulary from './pages/Vocabulary'
-import Quiz from './pages/Quiz'
+import Dictionary from './pages/Dictionary'
 import { useAuth } from './hooks/useAuth'
 
 function App() {
@@ -23,7 +23,7 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/reader" element={<Reader />} />
       <Route path="/vocabulary" element={<Vocabulary />} />
-      <Route path="/quiz" element={<Quiz />} />
+      <Route path="/dictionary" element={<Dictionary />} />
     </Routes>
     
   </div>

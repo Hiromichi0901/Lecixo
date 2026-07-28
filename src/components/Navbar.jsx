@@ -14,14 +14,14 @@ function Navbar() {
       </div>
 
       <div className="flex items-center justify-center gap-9">
+        <NavLink to="/dictionary" className={navLinkClass}>
+          Dictionary
+        </NavLink>
         <NavLink to="/" end className={navLinkClass}>
           Read
         </NavLink>
         <NavLink to="/vocabulary" className={navLinkClass}>
           Vocabulary
-        </NavLink>
-        <NavLink to="/quiz" className={navLinkClass}>
-          Quiz
         </NavLink>
       </div>
 
