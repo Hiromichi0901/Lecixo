@@ -1,7 +1,7 @@
-function WordListItem({ word, result }) {
+function WordListItem({ word, result }) { // this forms the word card
   return (
     <li className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4"> {/*word*/}
         <h3 className="text-lg font-semibold text-white">{word.word}</h3>
         {result && (
           <span
