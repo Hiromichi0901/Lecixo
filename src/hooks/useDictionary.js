@@ -1,38 +1,56 @@
 import { useState, useEffect } from 'react';
 
 function useDictionary(word) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  // Tagged with the word it belongs to, so a slow response for a previous
+  // word can never be shown as the result for the current one.
+  const [result, setResult] = useState(null);
 
   useEffect(() => {
     if (!word) return;
 
-    const fetchDefinition = async () => {
-      setLoading(true);
-      setError(null);
-      setData(null);
+    let cancelled = false;
 
+    const fetchDefinition = async () => {
       try {
         const response = await fetch(
-          `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`
+          `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`
         );
 
-        if (!response.ok) throw new Error('Word not found');
+        if (cancelled) return;
+
+        // A 404 means the word simply isn't in the dictionary, which is a
+        // normal outcome rather than a failure worth surfacing as an error.
+        if (response.status === 404) {
+          setResult({ word, data: null, error: null });
+          return;
+        }
+
+        if (!response.ok) throw new Error('Lookup failed');
 
         const json = await response.json();
-        setData(json[0]);
-      } catch (err) {
-        setError('No definition found.');
-      } finally {
-        setLoading(false);
+        if (cancelled) return;
+
+        setResult({ word, data: json[0] ?? null, error: null });
+      } catch {
+        if (cancelled) return;
+        setResult({ word, data: null, error: 'Could not reach the dictionary.' });
       }
     };
 
     fetchDefinition();
+
+    return () => {
+      cancelled = true;
+    };
   }, [word]);
 
-  return { data, loading, error };
+  const settled = result?.word === word;
+
+  return {
+    data: settled ? result.data : null,
+    error: settled ? result.error : null,
+    loading: Boolean(word) && !settled,
+  };
 }
 
 export default useDictionary;

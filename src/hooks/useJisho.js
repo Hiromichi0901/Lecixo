@@ -3,31 +3,41 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '../services/firebase';
 
 function useJisho(word) {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    // Tagged with the word it belongs to, so a slow response for a previous
+    // word can never be shown as the result for the current one.
+    const [result, setResult] = useState(null);
+
     useEffect(()=>{
         if(!word) return;
 
-        const fetchJapnese = async () => {
-            setLoading(true);
-            setError(null);
-            setData(null);
+        let cancelled = false;
 
+        const fetchJapanese = async () => {
             try {
                 const getJapanese = httpsCallable(functions, 'getJapanese');
-                const result = await getJapanese({word});
-                setData(result.data);
-            } catch (err) {
-                setError('No Japanese translation found');
-            } finally {
-                setLoading(false);
+                const response = await getJapanese({word});
+                if (cancelled) return;
+                setResult({word, data: response.data, error: null});
+            } catch {
+                if (cancelled) return;
+                setResult({word, data: null, error: 'No Japanese translation found'});
             }
         };
-        fetchJapnese();
+
+        fetchJapanese();
+
+        return () => {
+            cancelled = true;
+        };
     }, [word]);
 
-    return {data, loading, error};
+    const settled = result?.word === word;
+
+    return {
+        data: settled ? result.data : null,
+        error: settled ? result.error : null,
+        loading: Boolean(word) && !settled,
+    };
 }
 
 export default useJisho;

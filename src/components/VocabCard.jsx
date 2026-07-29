@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { saveWord } from "../services/vocabulary";
 import useDictionary from "../hooks/useDictionary";
@@ -15,31 +15,54 @@ function highlightWord(sentence, word) {
 
 function VocabCard({word, sentence,onClose, articleUrl, articleTitle}) {
     const { data, loading, error } = useDictionary(word);
-    const { data: japanese } = useJisho(word);
+    const { data: japanese, loading: japaneseLoading } = useJisho(word);
     const { user } = useAuth();
-    const [saved, setSaved] = useState(false);
-    const [saving, setSaving] = useState(false);
-
+    // The card stays mounted while `word` changes, so save state is tagged with
+    // the word it belongs to rather than reset, otherwise the next word would
+    // inherit the previous one's "Saved".
+    const [saveState, setSaveState] = useState({ word: null, status: 'idle', error: null });
 
     const definition = data?.meanings?.[0]?.definitions?.[0]?.definition;
     const pronunciation = data?.phonetic || data?.phonetics?.[0]?.text;
     const partOfSpeech = data?.meanings?.[0]?.partOfSpeech;
     const example = data?.meanings?.[0]?.definitions?.[0]?.example;
 
-    async function handleSave() {
-      if(!user || saving) return;
+    const isCurrentWord = saveState.word === word;
+    const saving = isCurrentWord && saveState.status === 'saving';
+    const saved = isCurrentWord && saveState.status === 'saved';
+    const saveError = isCurrentWord ? saveState.error : null;
 
-      setSaving(true);
-      await saveWord(user.uid, {
-        word,
-        definitionEn: definition || "",
-        definitionJa: japanese?.kanji || "",
-        exampleSentence: sentence || example || "",
-        sourceArticleUrl: articleUrl || null,
-        sourceArticleTitle: articleTitle || null,
-      })
-      setSaving(false);
-      setSaved(true);
+    const lookingUp = loading || japaneseLoading;
+    const hasEnglish = Boolean(definition);
+    // Jisho can report a match while leaving `kanji` blank, in which case the
+    // kana reading is the only Japanese form available to show.
+    const japaneseText = japanese?.found ? (japanese.kanji || japanese.reading) : '';
+    const hasJapanese = Boolean(japaneseText);
+    const noResults = !lookingUp && !error && !hasEnglish && !hasJapanese;
+    const canSave = !lookingUp && (hasEnglish || hasJapanese);
+
+    async function handleSave() {
+      if(!user || saving || saved) return;
+
+      setSaveState({ word, status: 'saving', error: null });
+
+      try {
+        await saveWord(user.uid, {
+          word,
+          definitionEn: definition || "",
+          definitionJa: japanese?.kanji || "",
+          exampleSentence: sentence || example || "",
+          sourceArticleUrl: articleUrl || null,
+          sourceArticleTitle: articleTitle || null,
+        })
+        setSaveState({ word, status: 'saved', error: null });
+      } catch {
+        setSaveState({
+          word,
+          status: 'idle',
+          error: "Could not save that word. Please try again.",
+        });
+      }
     }
 
   return (
@@ -72,32 +95,38 @@ function VocabCard({word, sentence,onClose, articleUrl, articleTitle}) {
       <div className="my-5 border-t border-neutral-800" />
 
       <div className="space-y-5">
-        {loading && (
+        {lookingUp && (
             <p className="text-sm text-neutral-500">Loading...</p>
         )}
-        {error && (
-            <p className="text-sm text-neutral-500">Error: {error}</p>
+        {!lookingUp && error && (
+            <p className="text-sm text-neutral-500">{error}</p>
         )}
-        {!loading && !error  && (
+        {noResults && (
+            <div>
+                <p className="text-sm text-neutral-400">
+                    No results for "{word}".
+                </p>
+                <p className="mt-1 text-sm text-neutral-500">
+                    Double-check the spelling, or try the word's base form.
+                </p>
+            </div>
+        )}
+        {!lookingUp && hasEnglish && (
             <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     Definition
                 </p>
-                <p className="text-sm text-neutral-500">{definition || 'No definition available.'}</p>
+                <p className="text-sm text-neutral-500">{definition}</p>
             </div>
         )}
         
-        {japanese?.found&& (
+        {!lookingUp && hasJapanese && (
           <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            日本語
-          </p>
-          <div className="text-sm leading-relaxed text-neutral-400 italic">
-            {japanese.kanji && (
-              <p className="text-sm leading-relaxed text-neutral-400 italic">{japanese.kanji}</p>
-            )}
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+              日本語
+            </p>
+            <p className="text-sm leading-relaxed text-neutral-400 italic">{japaneseText}</p>
           </div>
-        </div>
         )}
       
 
@@ -125,14 +154,22 @@ function VocabCard({word, sentence,onClose, articleUrl, articleTitle}) {
         
       </div>
 
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={saved || saving}
-        className="mt-6 w-full rounded-xl bg-emerald-800 py-3 text-sm font-medium text-white"
-      >
-        {saved ? "✓ Saved to vocabulary" : saving ? "Saving..." : "Save to vocabulary"}
-      </button>
+      {canSave && (
+        <>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saved || saving}
+            className="mt-6 w-full rounded-xl bg-emerald-800 py-3 text-sm font-medium text-white"
+          >
+            {saved ? "✓ Saved to vocabulary" : saving ? "Saving..." : "Save to vocabulary"}
+          </button>
+
+          {saveError && (
+            <p className="mt-2 text-sm text-neutral-500">{saveError}</p>
+          )}
+        </>
+      )}
     </div>
   );
 }
