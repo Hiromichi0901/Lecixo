@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { saveWord } from "../services/vocabulary";
 import useDictionary from "../hooks/useDictionary";
@@ -17,6 +18,8 @@ function VocabCard({word, sentence,onClose, articleUrl, articleTitle}) {
     const { data, loading, error } = useDictionary(word);
     const { data: japanese, loading: japaneseLoading } = useJisho(word);
     const { user } = useAuth();
+    const location = useLocation();
+    const navigate = useNavigate();
     // The card stays mounted while `word` changes, so save state is tagged with
     // the word it belongs to rather than reset, otherwise the next word would
     // inherit the previous one's "Saved".
@@ -40,9 +43,26 @@ function VocabCard({word, sentence,onClose, articleUrl, articleTitle}) {
     const hasJapanese = Boolean(japaneseText);
     const noResults = !lookingUp && !error && !hasEnglish && !hasJapanese;
     const canSave = !lookingUp && (hasEnglish || hasJapanese);
+    const signedIn = Boolean(user) && !user.isAnonymous;
 
     async function handleSave() {
-      if(!user || saving || saved) return;
+      if(saving || saved) return;
+
+      // Anonymous visitors can look words up but not keep them, so saving sends
+      // them to sign up instead of attempting a write they aren't allowed.
+      if(!signedIn) {
+        navigate('/login', {
+          state: {
+            mode: 'signup',
+            from: {
+              pathname: location.pathname,
+              search: location.search,
+              state: location.state,
+            },
+          },
+        });
+        return;
+      }
 
       setSaveState({ word, status: 'saving', error: null });
 

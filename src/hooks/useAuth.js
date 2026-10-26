@@ -1,23 +1,12 @@
-import { useState, useEffect } from 'react';
-import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../services/firebase';
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 export function useAuth() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const context = useContext(AuthContext);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setLoading(false);
-      } else {
-        signInAnonymously(auth);
-      }
-    });
+  if (!context) {
+    throw new Error("useAuth must be used inside an AuthProvider");
+  }
 
-    return () => unsubscribe();
-  }, []);
-
-  return { user, loading };
+  return context;
 }

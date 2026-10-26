@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useFlashcardTest } from '../hooks/useFlashcardTest';
 import { getAllWords } from '../services/vocabulary';
@@ -8,8 +9,9 @@ import WordListItem from '../components/WordListItem';
 
 function Vocabulary() {
   const { user, loading } = useAuth();
-  const [words, setWords] = useState([]);
-  const [loadingWords, setLoadingWords] = useState(true);
+  // Tagged with the uid it was loaded for, so switching accounts can't show the
+  // previous one's words while the next load is in flight.
+  const [loaded, setLoaded] = useState(null);
   const {
     status,
     index,
@@ -24,21 +26,27 @@ function Vocabulary() {
     exit,
   } = useFlashcardTest();
 
+  const signedIn = Boolean(user) && !user.isAnonymous;
+  const isCurrentUser = Boolean(loaded) && loaded.uid === user?.uid;
+  const words = isCurrentUser ? loaded.words : [];
+  const loadingWords = signedIn && !isCurrentUser;
+
   useEffect(() => {
-    if (!user) return;
+    // Anonymous visitors can't have saved anything, so there's nothing to fetch.
+    if (!user || user.isAnonymous) return;
 
     let cancelled = false;
+    const { uid } = user;
 
-    getAllWords(user.uid)
+    getAllWords(uid)
       .then((savedWords) => {
         if (cancelled) return;
-        setWords(savedWords);
-        setLoadingWords(false);
+        setLoaded({ uid, words: savedWords });
       })
       .catch((error) => {
         if (cancelled) return;
         console.error('Loading vocabulary failed:', error);
-        setLoadingWords(false);
+        setLoaded({ uid, words: [] });
       });
 
     return () => {
@@ -66,6 +74,33 @@ function Vocabulary() {
 
   if (loading || loadingWords) {
     return <div className="p-8 text-neutral-400">Loading...</div>;
+  }
+
+  if (!signedIn) {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-6 py-10 text-white">
+        <h1 className="text-3xl font-semibold">Vocabulary</h1>
+        <p className="mt-1 text-sm text-neutral-500">
+          Words you save while reading collect here.
+        </p>
+
+        <div className="mt-10 rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
+          <p className="text-sm text-neutral-300">
+            Create an account to build your vocabulary.
+          </p>
+          <p className="mt-1 text-sm text-neutral-500">
+            Looking words up is free, but saving them needs an account.
+          </p>
+          <Link
+            to="/login"
+            state={{ mode: 'signup', from: { pathname: '/vocabulary' } }}
+            className="mt-4 inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-500"
+          >
+            Create an account
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (status === 'finished') {
