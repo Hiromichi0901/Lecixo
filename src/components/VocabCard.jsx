@@ -76,7 +76,8 @@ function VocabCard({word, sentence,onClose, articleUrl, articleTitle}) {
           sourceArticleTitle: articleTitle || null,
         })
         setSaveState({ word, status: 'saved', error: null });
-      } catch {
+      } catch (error) {
+        console.error('Saving word failed:', error);
         setSaveState({
           word,
           status: 'idle',
