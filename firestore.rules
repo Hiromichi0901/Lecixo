@@ -27,11 +27,10 @@ service cloud.firestore {
         && request.resource.data.lastOpenedAt == request.time;
     }
 
-    // Same owner check as the previous users/{userId}/{document=**} rule,
-    // including anonymous sessions this app still signs in with. The
-    // recursive wildcard is narrowed to this path so history can be stricter.
+    // Vocabulary and history both require the matching account and a
+    // non-anonymous provider. Anonymous sessions are denied.
     match /users/{userId}/vocabulary/{wordId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if isOwner(userId) && isRealAccount();
     }
 
     match /users/{userId}/history/{articleId} {

@@ -163,8 +163,8 @@ describe('article history rules', () => {
   });
 });
 
-describe('vocabulary rules stay owner-only', () => {
-  it('still lets the owning anonymous session save a word, and nobody else', async () => {
+describe('vocabulary rules require a real account owner', () => {
+  it('lets the owning email account save a word and denies anonymous and other accounts', async () => {
     const word = {
       word: 'hello',
       definitionEn: 'a greeting',
@@ -177,8 +177,10 @@ describe('vocabulary rules stay owner-only', () => {
       lastReviewedAt: null,
     };
 
-    await assertSucceeds(setDoc(doc(anonymous('anon'), 'users', 'anon', 'vocabulary', 'hello'), word));
     await assertSucceeds(setDoc(doc(account('hiro'), 'users', 'hiro', 'vocabulary', 'hello'), word));
+    await assertSucceeds(getDocs(collection(account('hiro'), 'users', 'hiro', 'vocabulary')));
+    await assertFails(setDoc(doc(anonymous('anon'), 'users', 'anon', 'vocabulary', 'hello'), word));
+    await assertFails(getDocs(collection(anonymous('anon'), 'users', 'anon', 'vocabulary')));
     await assertFails(setDoc(doc(account('other'), 'users', 'hiro', 'vocabulary', 'hello'), word));
     await assertFails(setDoc(
       doc(testEnv.unauthenticatedContext().firestore(), 'users', 'hiro', 'vocabulary', 'hello'),

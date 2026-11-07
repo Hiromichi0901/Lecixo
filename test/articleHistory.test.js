@@ -111,6 +111,10 @@ describe('firestore rules source', () => {
     const rules = readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
     assert.equal(/match\s+\/users\/\{userId\}\/\{document=\*\*\}/.test(rules), false);
     assert.match(rules, /match \/users\/\{userId\}\/vocabulary\/\{wordId\}/);
+    assert.match(
+      rules,
+      /match \/users\/\{userId\}\/vocabulary\/\{wordId\} \{\s*allow read, write: if isOwner\(userId\) && isRealAccount\(\);/,
+    );
     assert.match(rules, /match \/users\/\{userId\}\/history\/\{articleId\}/);
     assert.match(rules, /sign_in_provider != 'anonymous'/);
     assert.match(rules, /hasOnly\(\['url', 'title', 'lastOpenedAt'\]\)/);
