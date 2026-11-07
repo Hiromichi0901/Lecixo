@@ -23,6 +23,7 @@ export const functions = getFunctions(app);
 // Auth and Firestore stay on the Vite project (production, if that is what
 // .env points at) unless VITE_USE_FIREBASE_EMULATORS=true. That flag points
 // Auth, Firestore, and Functions at the local emulators together.
+// The emulator project id must be the same as VITE_FIREBASE_PROJECT_ID.
 const useFirebaseEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
 
 if (useFirebaseEmulators) {

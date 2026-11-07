@@ -8,10 +8,11 @@ import Home from './pages/Home'
 import Reader from './pages/Reader'
 import Vocabulary from './pages/Vocabulary'
 import Dictionary from './pages/Dictionary'
+import Login from './pages/Login'
 import { useAuth } from './hooks/useAuth'
 
 function App() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const location = useLocation();
   const isReaderPage = location.pathname === '/reader';
 
@@ -24,6 +25,7 @@ function App() {
       <Route path="/reader" element={<Reader />} />
       <Route path="/vocabulary" element={<Vocabulary />} />
       <Route path="/dictionary" element={<Dictionary />} />
+      <Route path="/login" element={<Login />} />
     </Routes>
     
   </div>

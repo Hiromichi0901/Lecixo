@@ -2,13 +2,10 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
-    }
-
     // Email/password and Google set a provider other than "anonymous".
-    function isRealAccount() {
+    function isSignedInOwner(uid) {
       return request.auth != null
+        && request.auth.uid == uid
         && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
@@ -27,21 +24,16 @@ service cloud.firestore {
         && request.resource.data.lastOpenedAt == request.time;
     }
 
-    // Vocabulary and history both require the matching account and a
-    // non-anonymous provider. Anonymous sessions are denied.
-    match /users/{userId}/vocabulary/{wordId} {
-      allow read, write: if isOwner(userId) && isRealAccount();
+    match /users/{uid}/vocabulary/{wordId} {
+      allow read, write: if isSignedInOwner(uid);
     }
 
-    match /users/{userId}/history/{articleId} {
-      allow read: if isOwner(userId) && isRealAccount();
+    match /users/{uid}/history/{articleId} {
+      allow read: if isSignedInOwner(uid);
 
-      allow create: if isOwner(userId)
-        && isRealAccount()
-        && isHistoryArticle(articleId);
+      allow create: if isSignedInOwner(uid) && isHistoryArticle(articleId);
 
-      allow update: if isOwner(userId)
-        && isRealAccount()
+      allow update: if isSignedInOwner(uid)
         && isHistoryArticle(articleId)
         && resource != null
         && request.resource.data.url == resource.data.url;
