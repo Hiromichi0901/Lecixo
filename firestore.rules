@@ -2,12 +2,50 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Per-user data (users/{uid}/vocabulary/{wordId} and any future
-    // subcollections) is readable and writable only by that signed-in user.
-    // Anonymous auth and Google Sign-In both set request.auth.uid.
-    // Paths that do not match are denied by default.
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Email/password and Google set a provider other than "anonymous".
+    function isRealAccount() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // url + title + lastOpenedAt only. lastOpenedAt must be the server time
+    // so a client cannot backdate a visit. The id is the SHA-256 of the url.
+    function isHistoryArticle(articleId) {
+      return articleId.matches('^[a-f0-9]{64}$')
+        && request.resource.data.keys().hasOnly(['url', 'title', 'lastOpenedAt'])
+        && request.resource.data.url is string
+        && request.resource.data.url.size() > 0
+        && request.resource.data.url.size() <= 2000
+        && request.resource.data.url.matches('^https?://\\S+$')
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 300
+        && request.resource.data.lastOpenedAt == request.time;
+    }
+
+    // Same owner check as the previous users/{userId}/{document=**} rule,
+    // including anonymous sessions this app still signs in with. The
+    // recursive wildcard is narrowed to this path so history can be stricter.
+    match /users/{userId}/vocabulary/{wordId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/history/{articleId} {
+      allow read: if isOwner(userId) && isRealAccount();
+
+      allow create: if isOwner(userId)
+        && isRealAccount()
+        && isHistoryArticle(articleId);
+
+      allow update: if isOwner(userId)
+        && isRealAccount()
+        && isHistoryArticle(articleId)
+        && resource != null
+        && request.resource.data.url == resource.data.url;
     }
   }
 }
