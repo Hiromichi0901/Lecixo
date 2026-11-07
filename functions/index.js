@@ -1,7 +1,8 @@
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, onRequest } = require('firebase-functions/v2/https');
 const { setGlobalOptions } = require('firebase-functions');
 const Mercury = require('@postlight/mercury-parser');
 const axios = require('axios');
+const { handleDictionary } = require('./dictionary');
 
 setGlobalOptions({ maxInstances: 10 });
 
@@ -65,3 +66,24 @@ exports.getJapanese = onCall(async (request) => {
   }
   
 });
+
+// English definitions. Hosting rewrites /api/dictionary/** here so production
+// does not call dictionaryapi.dev from the browser. Dev serves the same path
+// from Vite, because `npm run dev` connects every callable to the Functions
+// emulator and that emulator is usually not running.
+exports.dictionary = onRequest(
+  { region: 'us-central1', invoker: 'public', timeoutSeconds: 20 },
+  async (req, res) => {
+    if (req.method !== 'GET') {
+      res.set('Allow', 'GET');
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+
+    const result = await handleDictionary(req.originalUrl || req.url || '');
+    if (result.status === 200) {
+      res.set('Cache-Control', 'public, max-age=86400');
+    }
+    res.status(result.status).json(result.body);
+  },
+);
