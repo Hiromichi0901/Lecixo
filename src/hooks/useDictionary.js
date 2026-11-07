@@ -12,8 +12,11 @@ function useDictionary(word) {
 
     const fetchDefinition = async () => {
       try {
+        // Same-origin route so the browser never talks to dictionaryapi.dev.
+        // Vite answers it during `npm run dev` (no Functions emulator). Firebase
+        // Hosting rewrites it to the `dictionary` function once that is deployed.
         const response = await fetch(
-          `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`
+          `/api/dictionary/en/${encodeURIComponent(word)}`
         );
 
         if (cancelled) return;
